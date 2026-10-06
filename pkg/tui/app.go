@@ -368,6 +368,7 @@ func NewAppWithAuth(cfg *config.Config, client jira.ClientInterface, authMethod 
 	app.infoPanel.SetCloud(app.isCloud)
 	app.projectList.ResolveNav = navResolver
 	app.detailView.ResolveNav = navResolver
+	app.modal.ResolveNav = navResolver
 
 	app.initCustomCommands()
 

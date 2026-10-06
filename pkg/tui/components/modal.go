@@ -49,10 +49,24 @@ type Modal struct {
 	filterInput TextInput
 	searching   bool
 	isError     bool
+	ResolveNav  NavResolver
+}
+
+// defaultModalNav mirrors the legacy hardcoded j/k bindings so Modal still
+// navigates sensibly if ResolveNav isn't wired up; App overrides it with
+// the user's configured keymap at startup.
+func defaultModalNav(key string) NavAction {
+	switch key {
+	case "j", "down", KeyCtrlJ:
+		return NavDown
+	case "k", "up", KeyCtrlK:
+		return NavUp
+	}
+	return NavNone
 }
 
 func NewModal() Modal {
-	return Modal{}
+	return Modal{ResolveNav: defaultModalNav}
 }
 
 func (m *Modal) show(title string, items []ModalItem, readOnly bool) {
@@ -280,26 +294,36 @@ func (m *Modal) handleSearchKey(msg tea.KeyMsg) (Modal, tea.Cmd) {
 }
 
 func (m *Modal) handleKey(msg tea.KeyMsg) (Modal, tea.Cmd) {
-	switch msg.String() {
-	case "/":
-		if !m.readOnly {
-			m.searching = true
-			m.filterInput.SetValue("")
-			return *m, nil
-		}
-	case "j", "down", KeyCtrlJ:
+	key := msg.String()
+	nav := NavNone
+	if m.ResolveNav != nil {
+		nav = m.ResolveNav(key)
+	}
+	switch nav {
+	case NavNone, NavTop, NavBottom, NavHalfDown, NavHalfUp:
+	case NavDown:
 		if m.readOnly {
 			m.offset++
 		} else {
 			m.moveCursor(1)
 		}
-	case "k", "up", KeyCtrlK:
+		return *m, nil
+	case NavUp:
 		if m.readOnly {
 			if m.offset > 0 {
 				m.offset--
 			}
 		} else {
 			m.moveCursor(-1)
+		}
+		return *m, nil
+	}
+	switch key {
+	case "/":
+		if !m.readOnly {
+			m.searching = true
+			m.filterInput.SetValue("")
+			return *m, nil
 		}
 	case " ":
 		return m.handleSpace()

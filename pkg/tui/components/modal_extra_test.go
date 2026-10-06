@@ -371,3 +371,30 @@ func TestModal_RenderItems_InternalItemRendersWithColor(t *testing.T) {
 	}
 	testkit.AssertEqual(t, "internal item rendered with color escape codes", view != stripANSI(view), true)
 }
+
+func TestModal_HandleKey_UsesResolveNavInsteadOfHardcodedJK(t *testing.T) {
+	t.Parallel()
+	m := NewModal()
+	m.SetSize(80, 24)
+	// Simulate a user config that swaps j/k: "k" now means down, "j" means up.
+	m.ResolveNav = func(key string) NavAction {
+		switch key {
+		case "k":
+			return NavDown
+		case "j":
+			return NavUp
+		}
+		return NavNone
+	}
+	items := []ModalItem{
+		{ID: testItem1ID, Label: testItem1Label},
+		{ID: testItem2ID, Label: testItem2Label},
+	}
+	m.Show(testTitle, items)
+
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
+	testkit.AssertEqual(t, "cursor moves down on configured down key", m.cursor, 1)
+
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	testkit.AssertEqual(t, "cursor moves up on configured up key", m.cursor, 0)
+}
