@@ -278,6 +278,7 @@ func (a *App) handleCreateFormPicker(msg components.CreateFormPickerMsg) (tea.Mo
 				return a, fetchSprints(a.client, a.boardID)
 			}
 			a.createForm.Resume()
+			a.statusPanel.SetError("no agile board found for this project")
 			return a, nil
 		default:
 			// no items and no known fetch, resume form

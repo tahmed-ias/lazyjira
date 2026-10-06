@@ -715,11 +715,14 @@ const (
 
 // metaToFormField converts one CreateMetaField to CreateFormField
 func (a *App) metaToFormField(mf jira.CreateMetaField) components.CreateFormField {
+	// Sprint is always a custom field on real Jira (never Schema.System), so
+	// it's identified by matching the discovered custom field ID instead.
+	isSprint := mf.FieldID == a.client.SprintFieldID()
 	ft := components.CFFieldSingleText
 	switch {
 	case mf.Schema.System == "description":
 		ft = components.CFFieldMultiText
-	case mf.Schema.System == fldPriority || mf.Schema.System == "issuetype" || mf.Schema.System == fldSprint:
+	case mf.Schema.System == fldPriority || mf.Schema.System == "issuetype" || isSprint:
 		ft = components.CFFieldSingleSelect
 	case mf.Schema.System == fldAssignee || mf.Schema.System == "reporter":
 		ft = components.CFFieldPerson
@@ -748,9 +751,13 @@ func (a *App) metaToFormField(mf jira.CreateMetaField) components.CreateFormFiel
 		allowed = append(allowed, components.ModalItem{ID: v.ID, Label: v.Name})
 	}
 
+	fieldID := mf.FieldID
+	if isSprint {
+		fieldID = fldSprint
+	}
 	ff := components.CreateFormField{
 		Name:          mf.Name,
-		FieldID:       mf.FieldID,
+		FieldID:       fieldID,
 		Type:          ft,
 		Required:      mf.Required,
 		AllowedValues: allowed,

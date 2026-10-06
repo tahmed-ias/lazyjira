@@ -233,7 +233,6 @@ func TestBuildCreateFields(t *testing.T) {
 
 func TestMetaToFormField(t *testing.T) {
 	t.Parallel()
-	app := newAppWithFake(t, &jiratest.FakeClient{T: t})
 
 	tests := []struct {
 		name   string
@@ -253,6 +252,7 @@ func TestMetaToFormField(t *testing.T) {
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
+			app := newAppWithFake(t, &jiratest.FakeClient{T: t})
 			field := app.metaToFormField(jira.CreateMetaField{FieldID: "f", Name: "F", Schema: testCase.schema})
 			testkit.AssertEqual(t, "field type", field.Type, testCase.want)
 		})
@@ -336,6 +336,24 @@ func TestMetaToFormField_AssigneeNotPrefilled(t *testing.T) {
 	if field.Value != nil {
 		t.Errorf("assignee must not be auto-prefilled, got %v", field.Value)
 	}
+}
+
+func TestMetaToFormField_SprintCustomFieldIsSingleSelect(t *testing.T) {
+	t.Parallel()
+	// On real Jira, Sprint is always a custom field (schema.system is never
+	// "sprint"); it must be identified via the discovered custom field ID.
+	fake := &jiratest.FakeClient{T: t}
+	fake.SprintFieldIDFunc = func() string { return "customfield_10020" }
+	app := newAppWithFake(t, fake)
+
+	field := app.metaToFormField(jira.CreateMetaField{
+		FieldID: "customfield_10020",
+		Name:    "Sprint",
+		Schema:  jira.CreateMetaSchema{Type: schemaArray, Items: "string", Custom: "com.pyxis.greenhopper.jira:gh-sprint"},
+	})
+
+	testkit.AssertEqual(t, "field type", field.Type, components.CFFieldSingleSelect)
+	testkit.AssertEqual(t, "canonical field id", field.FieldID, fldSprint)
 }
 
 func TestApplyDuplicatePrefill(t *testing.T) {

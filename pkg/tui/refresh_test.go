@@ -16,6 +16,9 @@ func newAppWithFake(t *testing.T, fake *jiratest.FakeClient) *App {
 	t.Helper()
 	app := newTestApp()
 	app.client = fake
+	if fake.SprintFieldIDFunc == nil {
+		fake.SprintFieldIDFunc = func() string { return fldSprint }
+	}
 	logFlag := false
 	app.logFlag = &logFlag
 	app.infoPanel = views.NewInfoPanel()
